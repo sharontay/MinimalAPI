@@ -259,6 +259,8 @@ app.MapPut("{id}/start", (int id, RaceDb db) =>
     }
 
     dbCarRace.Status = "Started";
+    var finishedRace = RunCarRace(dbCarRace);
+    dbCarRace.Status = "Finished";
     db.SaveChanges();
 
     return Results.Ok(dbCarRace);
@@ -514,6 +516,43 @@ app.MapGet("/weatherforecast", () =>
 #endregion
 
 app.Run();
+
+// Methods
+
+static CarRace RunCarRace(CarRace carRace)
+{
+    var racers = new List<Car>();
+    foreach (var car in carRace.Cars)
+    {
+        while (car.DistanceCoverdInMiles < carRace.Distance
+            && car.RacedForHours < carRace.TimeLimit)
+        {
+            var random = new Random().Next(1, 101);
+            if (random <= car.MelfunctionChance)
+            {
+                car.MelfunctionsOccured++;
+            }
+            else
+            {
+                car.DistanceCoverdInMiles += car.Speed;
+            }
+            car.RacedForHours++;
+        }
+
+        if (car.DistanceCoverdInMiles >= carRace.Distance)
+        {
+            car.FinishedRace = true;
+        }
+
+        racers.Add(car);
+    }
+    carRace.Cars = racers.OrderBy(x => x.FinishedRace)
+                         .ThenByDescending(x => x.DistanceCoverdInMiles)
+                         .ThenByDescending(x => x.RacedForHours)
+                         .ToList();
+
+    return carRace;
+}
 
 #region Models
 
