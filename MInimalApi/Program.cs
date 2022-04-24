@@ -480,7 +480,7 @@ app.MapPut("{motorbikeRaceId}/addmotorbike/{motorbikeId}", (int motorbikeRaceId,
 
 app.MapPut("api/motorbikeraces/{id}/start", (int id, RaceDb db) =>
 {
-    var dbMotorbikeRace = db.MotorbikeRaces.FirstOrDefault(dbMotorbikeRace => dbMotorbikeRace.Id == id);
+    var dbMotorbikeRace = db.MotorbikeRaces.Include(x => x.Motorbikes).FirstOrDefault(dbMotorbikeRace => dbMotorbikeRace.Id == id);
 
     if (dbMotorbikeRace == null)
     {
@@ -488,6 +488,8 @@ app.MapPut("api/motorbikeraces/{id}/start", (int id, RaceDb db) =>
     }
 
     dbMotorbikeRace.Status = "Started";
+    var finishedRace = RunMotorbikeRace(dbMotorbikeRace);
+    dbMotorbikeRace.Status = "Finished";
     db.SaveChanges();
     return Results.Ok(dbMotorbikeRace);
 })
@@ -517,7 +519,9 @@ app.MapGet("/weatherforecast", () =>
 
 app.Run();
 
-// Methods
+#region Methods
+
+// Run car race method
 
 static CarRace RunCarRace(CarRace carRace)
 {
@@ -553,6 +557,45 @@ static CarRace RunCarRace(CarRace carRace)
 
     return carRace;
 }
+
+// Run motorbike method
+
+
+static MotorbikeRace RunMotorbikeRace(MotorbikeRace motorbikeRace)
+{
+    var racers = new List<Motorbike>();
+    foreach (var bike in motorbikeRace.Motorbikes)
+    {
+        while (bike.DistanceCoverdInMiles < motorbikeRace.Distance
+               && bike.RacedForHours < motorbikeRace.TimeLimit)
+        {
+            bike.RacedForHours++;
+            var random = new Random().Next(0, 100);
+            if (random <= bike.MelfunctionChance)
+            {
+                bike.MelfunctionsOccured++;
+            }
+            else
+            {
+                bike.DistanceCoverdInMiles += bike.Speed;
+            }
+        }
+        if (bike.DistanceCoverdInMiles >= motorbikeRace.Distance)
+        {
+            bike.FinishedRace = true;
+        }
+
+        racers.Add(bike);
+    }
+    motorbikeRace.Motorbikes = racers.OrderBy(x => x.FinishedRace)
+                                     .ThenByDescending(x => x.DistanceCoverdInMiles)
+                                     .ThenByDescending(x => x.RacedForHours)
+                                     .ToList();
+
+    return motorbikeRace;
+}
+
+#endregion
 
 #region Models
 
